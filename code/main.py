@@ -46,7 +46,7 @@ if __name__ == '__main__':
     # visual_recog.get_feature_from_wordmap_SPM(wordmap, 3, dictionary.shape[0])
 
     # ## 2.1.1 - 2.4.1
-    visual_recog.build_recognition_system(num_workers=num_cores)
+    # visual_recog.build_recognition_system(num_workers=num_cores)
 
     # ########### Section 3 ############
     # ## 3.1.1 - 3.1.3
@@ -56,10 +56,10 @@ if __name__ == '__main__':
 
     # ########### Section 4 ############
     # ## 4.1.1
-    # vgg16 = torchvision.models.vgg16(pretrained=True).double()
-    # vgg16.eval()
-    # diff = deep_recog.evaluate_deep_extractor(image, vgg16)
-    # print(diff)
+    vgg16 = torchvision.models.vgg16(pretrained=True).double()
+    vgg16.eval()
+    diff = deep_recog.evaluate_deep_extractor(image, vgg16)
+    print(diff)
 
     # ## 4.1.2
     # vgg16 = torchvision.models.vgg16(pretrained=True).double()

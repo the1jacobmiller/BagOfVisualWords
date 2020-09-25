@@ -24,16 +24,15 @@ def evaluate_deep_extractor(img, vgg16):
     '''
     vgg16_weights = util.get_VGG16_weights()
     img_torch = preprocess_image(img)
-    
+
     feat = network_layers.extract_deep_feature(np.transpose(img_torch.numpy(), (1,2,0)), vgg16_weights)
-    
+
     with torch.no_grad():
         vgg_classifier = torch.nn.Sequential(*list(vgg16.classifier.children())[:-3])
         vgg_feat_feat = vgg16.features(img_torch[None, ])
         vgg_feat_feat = vgg_classifier(vgg_feat_feat.flatten())
 
     return np.sum(np.abs(vgg_feat_feat.numpy() - feat))
-
 
 def build_recognition_system(vgg16, num_workers=2):
     '''
@@ -51,9 +50,8 @@ def build_recognition_system(vgg16, num_workers=2):
     train_data = np.load("../data/train_data.npz")
 
     # ----- TODO -----
-    
+
     pass
-    
 
 def evaluate_recognition_system(vgg16, num_workers=2):
     '''
@@ -71,9 +69,8 @@ def evaluate_recognition_system(vgg16, num_workers=2):
     test_data = np.load("../data/test_data.npz")
 
     # ----- TODO -----
-    
-    pass
 
+    pass
 
 def preprocess_image(image):
     '''
@@ -90,7 +87,6 @@ def preprocess_image(image):
 
     pass
 
-
 def get_image_feature(args):
     '''
     Extracts deep features from the prebuilt VGG-16 network.
@@ -99,7 +95,7 @@ def get_image_feature(args):
     * i: index of training image
     * image_path: path of image file
     * vgg16: prebuilt VGG-16 network.
-    
+
     [output]
     * feat: evaluated deep feature
     '''
@@ -107,11 +103,8 @@ def get_image_feature(args):
     i, image_path, vgg16 = args
 
     # ----- TODO -----
-    
+
     pass
-
-
-
 
 def distance_to_set(feature, train_features):
     '''

@@ -24,6 +24,7 @@ def build_recognition_system(num_workers=2):
     * SPM_layer_num: number of spatial pyramid layers
     '''
 
+    print('Building recognition system')
     start_time = time.time()
     train_data = np.load("../data/train_data.npz")
     dictionary = np.load("dictionary.npy")
@@ -38,13 +39,14 @@ def build_recognition_system(num_workers=2):
     N = len(files)
     tmp_files = []
     for i in range(0,N,num_workers):
+        print(100*i/N, 'percent done')
         print('Time since started:', time.time()-start_time)
         with Pool(num_workers) as pool:
             args = []
             for j in range(num_workers):
                 if i+j < N:
                     image_path = '../data/'+files[i+j]
-                    args.append((image_path,i,dictionary,layer_num,K))
+                    args.append((image_path,i+j,dictionary,layer_num,K))
             tmp_files.extend(pool.map(get_image_feature,args))
 
     print('Gathering responses')
@@ -72,12 +74,51 @@ def evaluate_recognition_system(num_workers=2):
     * accuracy: accuracy of the evaluated system
     '''
 
-
+    print('Evaluating recognition system')
+    start_time = time.time()
     test_data = np.load("../data/test_data.npz")
     trained_system = np.load("trained_system.npz")
-    # ----- TODO -----
+    dictionary = trained_system['arr_0']
+    features = trained_system['arr_1']
+    labels = trained_system['arr_2']
+    layer_num = trained_system['arr_3']
 
-    pass
+    C = np.zeros((8,8))
+    K = dictionary.shape[0]
+
+    # extract histograms of features
+    files = test_data['files']
+    N = len(files)
+    feature_tmp_files = []
+    dist_tmp_files = []
+    for i in range(0,N,num_workers):
+        print(100*i/N, 'percent done')
+        print('Time since started:', time.time()-start_time)
+        with Pool(num_workers) as pool:
+            args = []
+            for j in range(num_workers):
+                if i+j < N:
+                    image_path = '../data/'+files[i+j]
+                    args.append((image_path,i+j,dictionary,layer_num,K))
+            feature_tmp_files = pool.map(get_image_feature,args)
+            args = []
+            for j in range(num_workers):
+                if i+j < N:
+                    wordmap = np.load(feature_tmp_files[j])
+                    args.append((wordmap,features,i+j))
+            dist_tmp_files.extend(pool.map(distance_to_set,args))
+
+    test_labels = test_data['labels']
+    for i in range(len(dist_tmp_files)):
+        label = test_labels[i]
+        dists = np.load(dist_tmp_files[i])
+        pred = labels[np.argmax(dists)]
+        C[label,pred] += 1
+
+    os.system('rm -r tmp_dist')
+    os.system('rm -r tmp_features')
+
+    return C,np.diag(C).sum()/C.sum()
 
 def get_image_feature(args):
     '''
@@ -99,11 +140,13 @@ def get_image_feature(args):
     features = get_feature_from_wordmap_SPM(wordmap, layer_num, K)
 
     # save filter features to a temp file
-    filename = '../tmp/'+str(i)+'.npy'
+    if not os.path.isdir('tmp_features'):
+        os.system('mkdir tmp_features')
+    filename = 'tmp_features/'+str(i)+'.npy'
     np.save(filename, features)
     return filename
 
-def distance_to_set(word_hist, histograms):
+def distance_to_set(args):
     '''
     Compute similarity between a histogram of visual words with all training image histograms.
 
@@ -115,7 +158,15 @@ def distance_to_set(word_hist, histograms):
     * sim: numpy.ndarray of shape (N)
     '''
 
-    return np.sum(np.minimum(word_hist,histograms),axis=1)
+    word_hist, histograms, i = args
+    dists = np.sum(np.minimum(word_hist,histograms),axis=1)
+
+    # save filter features to a temp file
+    if not os.path.isdir('tmp_dist'):
+        os.system('mkdir tmp_dist')
+    filename = 'tmp_dist/'+str(i)+'.npy'
+    np.save(filename, dists)
+    return filename
 
 def get_feature_from_wordmap(wordmap, dict_size):
     '''
@@ -156,7 +207,7 @@ def get_feature_from_wordmap_SPM(wordmap, layer_num, dict_size):
     for l in range(layer_num-1,-1,-1):
         if l == 0:
             hist_layer = get_feature_from_wordmap(cell,dict_size)
-            weight = 2**(-layer_num+1)
+            weight = 2.**(-layer_num+1)
             hist_layer = weight*hist_layer
             hist_all[hist_all_index:hist_all_index+hist_layer.shape[0]] = hist_layer
             hist_all_index += hist_layer.shape[0]
@@ -173,7 +224,7 @@ def get_feature_from_wordmap_SPM(wordmap, layer_num, dict_size):
                     hist_layer[cell_num*dict_size:cell_num*dict_size+dict_size] = hist
                     cell_num += 1
             norm_factor = 1./(cells*cells)
-            weight = 2**(l-layer_num)
+            weight = 2.**(l-layer_num)
             hist_layer = norm_factor*weight*hist_layer
             hist_all[hist_all_index:hist_all_index+hist_layer.shape[0]] = hist_layer
             hist_all_index += hist_layer.shape[0]

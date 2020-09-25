@@ -72,7 +72,6 @@ def get_visual_words(image, dictionary):
     * wordmap: numpy.ndarray of shape (H, W)
     '''
 
-    # ----- TODO -----
     # if grayscale, convert to 3 channels
     grayscale = len(image.shape)==2
     if grayscale:
@@ -178,7 +177,9 @@ def compute_dictionary_one_image(args):
         responses[:,k:k+3] = filter_image[corners[:,0],corners[:,1]]
 
     # save filter responses to a temp file
-    filename = '../tmp/'+str(i)+'.npy'
+    if not os.path.isdir('tmp_dictionary'):
+        os.system('mkdir tmp_dictionary')
+    filename = 'tmp_dictionary/'+str(i)+'.npy'
     np.save(filename, responses)
     return filename
 
@@ -193,15 +194,17 @@ def compute_dictionary(num_workers=2):
     * dictionary: numpy.ndarray of shape (K, 3F)
     '''
 
+    K = 250
+    alpha = 250
+    print('Creating dictionary with alpha =', alpha, ' and K =', K)
     start_time = time.time()
     train_data = np.load("../data/train_data.npz")
-    # ----- TODO -----
-    K = 255
-    alpha = 250
+
     files = train_data['files']
     T = len(files)
     tmp_files = []
     for i in range(0,T,num_workers):
+        print(100*i/T, 'percent done')
         print('Time since started:', time.time()-start_time)
         with Pool(num_workers) as pool:
             args = []
@@ -222,5 +225,6 @@ def compute_dictionary(num_workers=2):
     kmeans = sklearn.cluster.KMeans(n_clusters=K).fit(responses)
     dictionary = kmeans.cluster_centers_
 
-    np.save('../dictionary.npy', dictionary)
+    np.save('dictionary.npy', dictionary)
+    os.system('rm -r tmp_dictionary')
     print('Final runtime:', time.time()-start_time)
