@@ -8,6 +8,7 @@ import math
 import visual_words
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
+import pickle
 
 
 def build_recognition_system(num_workers=2):

@@ -194,8 +194,8 @@ def compute_dictionary(num_workers=2):
     * dictionary: numpy.ndarray of shape (K, 3F)
     '''
 
-    K = 250
-    alpha = 250
+    K = 300
+    alpha = 500
     print('Creating dictionary with alpha =', alpha, ' and K =', K)
     start_time = time.time()
     train_data = np.load("../data/train_data.npz")

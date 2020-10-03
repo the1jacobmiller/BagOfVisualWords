@@ -2,6 +2,7 @@ import numpy as np
 import scipy.ndimage
 import skimage
 import os
+import util
 
 def extract_deep_feature(x, vgg16_weights):
     '''
@@ -19,6 +20,7 @@ def extract_deep_feature(x, vgg16_weights):
     mean = np.array([0.485,0.456,0.406])
     std = np.array([0.229,0.224,0.225])
     x = skimage.transform.resize(x, (224,224))
+    x = x.astype('double')
     x = (x-mean)/std
 
     # loop through layers
@@ -27,18 +29,25 @@ def extract_deep_feature(x, vgg16_weights):
         if linear_count >= 2:
             break
         layer_str = layer[0]
-        W = layer[1]
-        b = layer[2]
+        # print(layer_str, 'with input of shape', x.shape)
         if 'conv2d' == layer_str:
+            W = layer[1]
+            b = layer[2]
             x = multichannel_conv2d(x, W, b)
         elif 'relu' == layer_str:
             x = relu(x)
         elif 'maxpool2d' == layer_str:
-            size = layer.kernel_size
+            size = layer[1]
             x = max_pool2d(x, size)
         elif 'linear' == layer_str:
+            if linear_count == 0:
+                x = np.transpose(x).flatten()
+            W = layer[1]
+            b = layer[2]
             x = linear(x,W,b)
             linear_count += 1
+        # print('output shape', x.shape)
+        # print('-----------------------')
     return x
 
 def multichannel_conv2d(x, weight, bias):
@@ -54,16 +63,19 @@ def multichannel_conv2d(x, weight, bias):
     * feat: numpy.ndarray of shape (H, W, output_dim)
     '''
 
-    # TODO
-
-    m,n,depth = x.shape
+    m,n,input_dim = x.shape
+    output_dim,input_dim,kernel_size,kernel_size = weight.shape
+    x_new = np.zeros((m,n,output_dim))
 
     # for each filter
-
+    for i in range(output_dim):
+        b = bias[i]
         # for each channel
-
-            # x[:,:,channel] = scipy.ndimage.convolve(x[:,:,channel],filter,b)
-    return x
+        for j in range(input_dim):
+            filter = np.flip(weight[i,j,:,:])
+            x_new[:,:,i] += scipy.ndimage.convolve(x[:,:,j],filter)
+        x_new[:,:,i] += b
+    return x_new
 
 def relu(x):
     '''
@@ -76,8 +88,7 @@ def relu(x):
     * y: numpy.ndarray
     '''
 
-    zeros = np.zeros((x.shape[0],))
-    return np.maximum(x,zeros)
+    return np.maximum(x,0)
 
 def max_pool2d(x, size):
     '''
